@@ -1,0 +1,186 @@
+C51 COMPILER V9.55   MPU6050                                                               05/27/2018 19:18:51 PAGE 1   
+
+
+C51 COMPILER V9.55, COMPILATION OF MODULE MPU6050
+OBJECT MODULE PLACED IN .\Objects\mpu6050.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE mpu6050.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\m
+                    -pu6050.lst) OBJECT(.\Objects\mpu6050.obj)
+
+line level    source
+
+   1          #include"reg52.h"
+   2          #include"common.h"
+   3          #include"iic.h"
+   4          #include"mpu6050.h"
+   5          //
+   6          void mpu6050_init()     //mpu初始化
+   7          {
+   8   1              iic_init();
+   9   1              iic_write_address(PWR_MGMT_1,0x00);
+  10   1              iic_write_address(SMPLRT_DIV, 0x07);
+  11   1              iic_write_address(CONFIG,0x06);
+  12   1              iic_write_address(GYRO_CONFIG,0x18);
+  13   1              iic_write_address(ACCE_CONFIG,0x01);
+  14   1      }
+  15          void mpu6050_timer() //计算积分时间
+  16          {
+  17   1              TMOD = 0x01;
+  18   1              TH0 = 0x00;
+  19   1              TL0 = 0x00;
+  20   1              ET0 =1;
+  21   1              EA =1;
+  22   1      }
+  23          void mpu6050_get_data(int *p)
+  24          {
+  25   1              unsigned char temp[12];
+  26   1              unsigned char num,num1;
+  27   1              for (num=1;num<21;num++)
+  28   1              {
+  29   2                      for(num1=0;num1<6;num1+1)
+  30   2                      {
+  31   3                              temp[num1]=iic_read_address(ACCEL_XOUT_H + num1);
+  32   3                      }
+  33   2                      for(num1=0;num1<6;num1++)
+  34   2                      {
+  35   3                              temp[6+num1]=iic_read_address(GYRO_XOUT_H + num1);
+  36   3                      }
+  37   2                      *p     = (int)( (int) (temp[0]<<8) | temp[1]);
+  38   2                      *(++p) = (int)( (int) (temp[2]<<8) | temp[3]);
+  39   2                      *(++p) = (int)( (int) (temp[4]<<8) | temp[5]);
+  40   2                      
+  41   2                      *(++p) = (int)( (int) (temp[6]<<8) | temp[7]);
+  42   2                      *(++p) = (int)( (int) (temp[8]<<8) | temp[9]);
+  43   2                      *(++p) = (int)( (int) (temp[10]<<8) | temp[11]);
+  44   2              }
+  45   1      }
+  46          void calibrate_mpu6050(int *bias_gyro,int *bias_acce)
+  47          {
+  48   1              unsigned char temp[12];
+  49   1              unsigned char num,num1;
+  50   1              long  bias_temp[6]={'0','0','0','0','0','0'};
+  51   1              int bias_a[3]={'0','0','0'};
+  52   1              int bias_g[3]={'0','0','0'};
+  53   1              for (num=1;num<21;num++)
+  54   1              {
+C51 COMPILER V9.55   MPU6050                                                               05/27/2018 19:18:51 PAGE 2   
+
+  55   2                      for(num1=0;num1<6;num1+1)
+  56   2                      {
+  57   3                              temp[num1]=iic_read_address(ACCEL_XOUT_H + num1);
+  58   3                      }
+  59   2                      for(num1=0;num1<6;num1++)
+  60   2                      {
+  61   3                              temp[6+num1]=iic_read_address(GYRO_XOUT_H + num1);
+  62   3                      }
+  63   2                      bias_a[0] = (int)( (int) (temp[0]<<8) | temp[1]);
+  64   2                      bias_a[1] = (int)( (int) (temp[2]<<8) | temp[3]);
+  65   2                      bias_a[2] = (int)( (int) (temp[4]<<8) | temp[5]);
+  66   2                      
+  67   2                      bias_g[0] = (int)( (int) (temp[6]<<8) | temp[7]);
+  68   2                      bias_g[1] = (int)( (int) (temp[8]<<8) | temp[9]);
+  69   2                      bias_g[2] = (int)( (int) (temp[10]<<8) | temp[11]);
+  70   2                      
+  71   2                      bias_temp[0] += bias_a[0];
+  72   2                      bias_temp[1] += bias_a[1];
+  73   2                      bias_temp[2] += bias_a[2];
+  74   2                      bias_temp[4] += bias_g[0];
+  75   2                      bias_temp[5] += bias_g[1];
+  76   2                      bias_temp[6] += bias_g[2];
+  77   2                      
+  78   2              }
+  79   1              *(bias_acce)   = (int)(bias_temp[0] / 20);
+  80   1              *(++bias_acce) = (int)(bias_temp[1] / 20);
+  81   1              *(++bias_acce) = (int)(bias_temp[2] / 20);
+  82   1              *(bias_gyro)   = (int)(bias_temp[3] / 20);
+  83   1              *(++bias_gyro) = (int)(bias_temp[4] / 20);
+  84   1              *(++bias_gyro) = (int)(bias_temp[5] / 20);
+  85   1      }
+  86          void MadgwickQuaternionUpdate(float q[],float ax, float ay, float az, float gx, float gy, float gz,float d
+             -eltat,float zeta)
+  87          //四元数转换
+  88          {
+*** ERROR C236 IN LINE 88 OF mpu6050.c: '_MadgwickQuaternionUpdate': different length of parameter lists
+  89   1                  float q1 = q[0], q2 = q[1], q3 = q[2], q4 = q[3];         
+  90   1                  float norm;                                               
+  91   1                  float f1, f2, f3;                                         
+  92   1                  float J_11or24, J_12or23, J_13or22, J_14or21, J_32, J_33; 
+  93   1                  float qDot1, qDot2, qDot3, qDot4;
+  94   1                  float hatDot1, hatDot2, hatDot3, hatDot4;
+  95   1                  float gerrx, gerry, gerrz, gbiasx, gbiasy, gbiasz;  
+  96   1      
+  97   1                  
+  98   1                  float _halfq1 = 0.5f * q1;
+  99   1                  float _halfq2 = 0.5f * q2;
+ 100   1                  float _halfq3 = 0.5f * q3;
+ 101   1                  float _halfq4 = 0.5f * q4;
+ 102   1                  float _2q1 = 2.0f * q1;
+ 103   1                  float _2q2 = 2.0f * q2;
+ 104   1                  float _2q3 = 2.0f * q3;
+ 105   1                  float _2q4 = 2.0f * q4;
+ 106   1      
+ 107   1                              norm = sqrt(ax * ax + ay * ay + az * az);
+ 108   1                  if (norm == 0.0f) return; 
+ 109   1                  norm = 1.0f/norm;
+ 110   1                  ax *= norm;
+ 111   1                  ay *= norm;
+ 112   1                  az *= norm;
+ 113   1                  
+ 114   1                   
+C51 COMPILER V9.55   MPU6050                                                               05/27/2018 19:18:51 PAGE 3   
+
+ 115   1                  f1 = _2q2 * q4 - _2q1 * q3 - ax;
+ 116   1                  f2 = _2q1 * q2 + _2q3 * q4 - ay;
+ 117   1                  f3 = 1.0f - _2q2 * q2 - _2q3 * q3 - az;
+ 118   1                  J_11or24 = _2q3;
+ 119   1                  J_12or23 = _2q4;
+ 120   1                  J_13or22 = _2q1;
+ 121   1                  J_14or21 = _2q2;
+ 122   1                  J_32 = 2.0f * J_14or21;
+ 123   1                  J_33 = 2.0f * J_11or24;
+ 124   1                
+ 125   1                  
+ 126   1                  hatDot1 = J_14or21 * f2 - J_11or24 * f1;
+ 127   1                  hatDot2 = J_12or23 * f1 + J_13or22 * f2 - J_32 * f3;
+ 128   1                  hatDot3 = J_12or23 * f2 - J_33 *f3 - J_13or22 * f1;
+ 129   1                  hatDot4 = J_14or21 * f1 + J_11or24 * f2;
+ 130   1                  
+ 131   1                 
+ 132   1                  norm = sqrt(hatDot1 * hatDot1 + hatDot2 * hatDot2 + hatDot3 * hatDot3 + hatDot4 * hatDot4);
+ 133   1                  hatDot1 /= norm;
+ 134   1                  hatDot2 /= norm;
+ 135   1                  hatDot3 /= norm;
+ 136   1                  hatDot4 /= norm;
+ 137   1                  
+ 138   1                  
+ 139   1                  gerrx = _2q1 * hatDot2 - _2q2 * hatDot1 - _2q3 * hatDot4 + _2q4 * hatDot3;
+ 140   1                  gerry = _2q1 * hatDot3 + _2q2 * hatDot4 - _2q3 * hatDot1 - _2q4 * hatDot2;
+ 141   1                  gerrz = _2q1 * hatDot4 - _2q2 * hatDot3 + _2q3 * hatDot2 - _2q4 * hatDot1;
+ 142   1                  
+ 143   1                  
+ 144   1                  gbiasx += gerrx * deltat * zeta;
+ 145   1                  gbiasy += gerry * deltat * zeta;
+ 146   1                  gbiasz += gerrz * deltat * zeta;
+ 147   1                              
+ 148   1                  
+ 149   1                  qDot1 = -_halfq2 * gx - _halfq3 * gy - _halfq4 * gz;
+ 150   1                  qDot2 =  _halfq1 * gx + _halfq3 * gz - _halfq4 * gy;
+ 151   1                  qDot3 =  _halfq1 * gy - _halfq2 * gz + _halfq4 * gx;
+ 152   1                  qDot4 =  _halfq1 * gz + _halfq2 * gy - _halfq3 * gx;
+ 153   1      
+ 154   1                  
+ 155   1                  q1 += (qDot1 -(beta * hatDot1)) * deltat;
+ 156   1                  q2 += (qDot2 -(beta * hatDot2)) * deltat;
+ 157   1                  q3 += (qDot3 -(beta * hatDot3)) * deltat;
+ 158   1                  q4 += (qDot4 -(beta * hatDot4)) * deltat;
+ 159   1      
+ 160   1                
+ 161   1                  norm = sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4);    
+ 162   1                  norm = 1.0f/norm;
+ 163   1                  q[0] = q1 * norm;
+ 164   1                  q[1] = q2 * norm;
+ 165   1                  q[2] = q3 * norm;
+ 166   1                  q[3] = q4 * norm;
+ 167   1      }
+ 168           
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  1 ERROR(S)

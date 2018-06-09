@@ -1,0 +1,111 @@
+C51 COMPILER V9.55   DISPLAY1602                                                           06/09/2018 09:33:42 PAGE 1   
+
+
+C51 COMPILER V9.55, COMPILATION OF MODULE DISPLAY1602
+OBJECT MODULE PLACED IN .\Objects\display1602.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE display1602.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listin
+                    -gs\display1602.lst) OBJECT(.\Objects\display1602.obj)
+
+line level    source
+
+   1          #include"display1602.h"
+   2          #include"common.h"
+   3          #include"reg52.h"
+   4          
+   5          sbit lcden=P3^4;
+   6          sbit lcdrs=P3^5;
+   7          sbit lcdrw=P3^6;
+   8          sbit duanla=P2^6;
+   9          sbit weila=P2^7;
+  10          void write_com(unsigned char com) //write command 
+  11          {
+  12   1              lcdrs=0;
+  13   1              P0=com;
+  14   1              delay_ms(1);
+  15   1              lcden=1;
+  16   1              delay_ms(1);
+  17   1              lcden=0;
+  18   1      }
+  19          void write_data(unsigned char dat) //write data
+  20          {
+  21   1              lcdrs=1;
+  22   1              P0=dat;
+  23   1              delay_ms(1);
+  24   1              lcden=1;
+  25   1              delay_ms(1);
+  26   1              lcden=0;
+  27   1      }
+  28          void init_1602()
+  29          {
+  30   1              duanla=0;
+  31   1              weila=0;
+  32   1              lcden=0;
+  33   1              lcdrw=0;
+  34   1              write_com(0x38);
+  35   1              write_com(0x0c);
+  36   1              write_com(0x06);
+  37   1              write_com(0x01);
+  38   1      }
+  39          void display_1602_one(unsigned char x,y,cha) //显示一个字符
+  40          {
+  41   1              if ( x == 1)
+  42   1              {
+  43   2                      write_com(0x80+y);
+  44   2                      write_data(cha);
+  45   2              }
+  46   1              else 
+  47   1              {
+  48   2                      write_com(0x80+0x40+y);
+  49   2                      write_data(cha);
+  50   2              }
+  51   1      }
+  52          void display_1602_multi(unsigned char x,y,unsigned char temp_display[])//显示一个字符串
+  53          {
+  54   1              unsigned char num,temp;
+C51 COMPILER V9.55   DISPLAY1602                                                           06/09/2018 09:33:42 PAGE 2   
+
+  55   1              while(1)
+  56   1              {
+  57   2                      temp=temp_display[num];
+  58   2                      if ( temp =='\0')
+  59   2                              break;
+  60   2                      display_1602_one(x,y+num,temp);
+  61   2                      delay_ms(1);
+  62   2                      num++;
+  63   2              }
+  64   1      }
+  65          void format_display_1602(unsigned char x,y,int dat)//格式化int，便于1602显示
+  66          {
+  67   1              unsigned char temp[7];
+  68   1              unsigned char code number[]="0123456789";
+  69   1              if (dat<0)
+  70   1              {       
+  71   2                      dat=~(dat-1);
+  72   2                      temp[0]='-';
+  73   2              }
+  74   1              else 
+  75   1              {
+  76   2                      temp[0]='+';
+  77   2              }
+  78   1              temp[1]= number[dat/10000];
+  79   1              temp[2]= number[dat%10000/1000];
+  80   1              temp[3]= number[dat%1000/100];
+  81   1              temp[4]= number[dat%100/10];
+  82   1              temp[5]= number[dat%10];
+  83   1              display_1602_multi(x,y,temp);
+  84   1      }
+  85          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    382    ----
+   CONSTANT SIZE    =     11    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      22
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

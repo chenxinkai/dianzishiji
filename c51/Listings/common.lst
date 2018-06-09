@@ -1,0 +1,35 @@
+C51 COMPILER V9.55   COMMON                                                                06/09/2018 09:33:42 PAGE 1   
+
+
+C51 COMPILER V9.55, COMPILATION OF MODULE COMMON
+OBJECT MODULE PLACED IN .\Objects\common.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE common.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\co
+                    -mmon.lst) OBJECT(.\Objects\common.obj)
+
+line level    source
+
+   1          #include"common.h"
+   2          void delay_ms(unsigned int ms) //delay 1ms;
+   3          {
+   4   1              unsigned int a,b;
+   5   1              for ( a=ms ; a>0 ; a-- )
+   6   1                      for ( b=114; b>0; b-- );
+   7   1      }
+   8          void delay_10us(unsigned int us) //delay 10us;
+   9          {
+  10   1              while(us--);
+  11   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     41    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,7 @@
+".\Objects\main.obj",
+".\Objects\common.obj",
+".\Objects\display1602.obj",
+".\Objects\iic.obj",
+".\Objects\serial.obj" 
+TO ".\Objects\dianzisheji" 
+PRINT(".\Listings\dianzisheji.m51") RAMSIZE(256) 

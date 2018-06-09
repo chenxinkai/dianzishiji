@@ -1,0 +1,216 @@
+C51 COMPILER V9.55   MAIN                                                                  06/09/2018 09:33:42 PAGE 1   
+
+
+C51 COMPILER V9.55, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main
+                    -.lst) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include"common.h"
+   2          #include"iic.h"
+   3          #include"reg52.h"
+   4          #include"math.h"
+   5          //AD 配置****************************************
+   6          static unsigned char adData[2]={0,0};//存放校准时的ad值
+   7          static unsigned char adInitData[2]={0,0};//初始ad采集值
+   8          static unsigned char adTimeData[2]={0,0}; //存放实时采集数据
+   9          static unsigned char flag; //控制角度的正负
+  10          // **********************************************
+  11          //舵机配置**************************
+  12          sbit servoOne=P1^0;
+  13          sbit servoTwo=P1^1;
+  14          sbit servoChange=P0^0;
+  15          sbit servoQuite=P0^1;
+  16          #define ANCON 7.199
+  17          #define angler 1.875 //一个分度值对应的角度
+  18          #define distancex 60 // 激光到转轴的距离
+  19          #define distancey 100 // 激光到靶子的距离
+  20          #define servoUnit 10.239 //一个定时器单位等于的舵机角度 
+  21          static unsigned char servoHighOne[2]={0,0};//舵机1定时器数据 高电平时间
+  22          static unsigned char servoLowOne[2]={0,0};//舵机1定时器数据，低电平时间 = 20ms - 高电平时间
+  23          static unsigned char servoHighTwo[2]={0,0};//舵机2定时器数据 高电平时间
+  24          static unsigned char servoLowTwo[2]={0,0};//舵机2定时器数据，低电平时间 = 20ms - 高电平时间
+  25          //****************************************
+  26          
+  27          //舵机函数*****************************
+  28          void servoTimeInit() //舵机定时器初始化
+  29          {
+  30   1              TMOD &= ~(3 << 0);//定时器0清除
+  31   1              TMOD |=  (1 << 0);//工作方式1
+  32   1              TH0 = servoHighOne[0];
+  33   1              TL0 = servoHighOne[1];
+  34   1              TMOD &= ~(3 << 4);//定时器1清除
+  35   1              TMOD |=  (1 << 4);//工作方式1
+  36   1              TH1 = servoHighTwo[0];
+  37   1              TL1 = servoHighTwo[1];
+  38   1              ET0 =1;
+  39   1              ET1 =1;
+  40   1              TR1 =1;
+  41   1              TR0 = 1;
+  42   1              EA=1;
+  43   1              servoOne = 1;
+  44   1              servoTwo = 1;
+  45   1      }
+  46          void servoCalculation(unsigned char speed,unsigned char *ph,unsigned char *pl)//0~255 对应舵机1~180*
+  47          {
+  48   1              unsigned int temph,templ,temp; 
+  49   1              temp = (unsigned int)(speed * ANCON);
+  50   1              temph = (65076 - temp);
+  51   1              templ = (47563 + temp);
+  52   1              *ph = (temph >> 8);
+  53   1              *++ph = temph;
+  54   1              *pl = (templ >> 8);
+C51 COMPILER V9.55   MAIN                                                                  06/09/2018 09:33:42 PAGE 2   
+
+  55   1              *++pl = templ;
+  56   1      }
+  57          void servoTimerOne() interrupt 1//舵机1定时器中断程序，产生pwm
+  58          {
+  59   1              servoOne=~servoOne;
+  60   1              if (servoOne == 0)
+  61   1              {
+  62   2              TR0=0;
+  63   2              TH0 = servoLowOne[0];
+  64   2              TL0 = servoLowOne[1];
+  65   2              TR0=1;
+  66   2              }
+  67   1              else 
+  68   1              {
+  69   2              TR0=0;
+  70   2              TH0 = servoHighOne[0];
+  71   2              TL0 = servoHighOne[1];
+  72   2              TR0=1;
+  73   2              }
+  74   1      }
+  75          void servoTimerTwo() interrupt 3 //舵机2定时器中断程序，产生pwm
+  76          {
+  77   1              servoTwo=~servoTwo;
+  78   1              if (servoTwo == 0)
+  79   1              {
+  80   2              TR1=0;
+  81   2              TH1 = servoLowTwo[0];
+  82   2              TL1 = servoLowTwo[1];
+  83   2              TR1=1;
+  84   2              }
+  85   1              else 
+  86   1              {
+  87   2              TR1=0;
+  88   2              TH1 = servoHighTwo[0];
+  89   2              TL1 = servoHighTwo[1];
+  90   2              TR1=1;
+  91   2              }
+  92   1      }
+  93          void servoCalibration(unsigned char *p) //舵机校准；
+  94          {
+  95   1              unsigned char ad;
+  96   1              while(servoQuite)
+  97   1              {
+  98   2                      while (servoChange)
+  99   2                      {
+ 100   3                      ad = iic_read_address(0x90,0x03,0x91);
+ 101   3                      *p = ad;
+ 102   3                      servoCalculation(adData[0],servoHighOne,servoLowOne);
+ 103   3                      }
+ 104   2                      ad = iic_read_address(0x90,0x03,0x91);
+ 105   2                      *(p+1) = ad;
+ 106   2                      servoCalculation(adData[1],servoHighTwo,servoLowTwo);
+ 107   2              }
+ 108   1      }
+ 109          //***************************************
+ 110          void saveAdDate(unsigned char *p)
+ 111          {
+ 112   1              *p = iic_read_address(0x90,0x00,0x91);
+ 113   1              *++p = iic_read_address(0x90,0x01,0x91);
+ 114   1      }
+ 115          float servoQianhou()
+ 116          {//前后轴的计算*************************
+C51 COMPILER V9.55   MAIN                                                                  06/09/2018 09:33:42 PAGE 3   
+
+ 117   1              float temp1,temp2;
+ 118   1              float angley1,angley2;
+ 119   1              adTimeData[1]=iic_read_address(0x90,0x01,0x91);
+ 120   1              angley1=(float)((adTimeData[1] - adInitData[1]) * angler);
+ 121   1              if (angley1 >= 0)
+ 122   1              {
+ 123   2                      flag = 1 ;//加
+ 124   2                      temp1 = distancex - distancex*cos(angley1); //x- x*cos
+ 125   2                      temp2 = distancey + sin(angley1)*distancex ;//y + sin *x
+ 126   2                      angley2 = atan(temp1 / temp2);
+ 127   2              }
+ 128   1              else 
+ 129   1              {
+ 130   2                      flag = 0 ;//减
+ 131   2                      angley1 = fabs(angley1);
+ 132   2                      temp1 = distancex - distancex*cos(angley1);//x - x*cos
+ 133   2                      temp2 = distancey - sin(angley1)*distancex ;//y - sin*x 
+ 134   2                      angley2 = atan(temp1 / temp2);
+ 135   2              }
+ 136   1              return angley2;
+ 137   1      //*************************************
+ 138   1      }
+ 139          void servoAngleConvert(float angleTemp,unsigned char *ph,unsigned char *pl)
+ 140          {
+ 141   1              unsigned int temp,temp1,temp2;
+ 142   1              unsigned char temp3;
+ 143   1              temp = (unsigned int)(angleTemp * servoUnit * 28.6);
+ 144   1              if (flag == 1)
+ 145   1              {
+ 146   2              temp3 = *++ph;
+ 147   2              temp1 = *ph * 256 + temp3;
+ 148   2              temp2 = temp1 + temp;
+ 149   2              *ph =(temp2 >> 8);
+ 150   2              *++ph = temp2;
+ 151   2                      
+ 152   2              temp3 = *++pl;
+ 153   2              temp1 = *pl * 256 + temp3;
+ 154   2              temp2 = temp1 - temp;
+ 155   2              *pl =(temp2 >> 8);
+ 156   2              *++pl = temp2;
+ 157   2              }
+ 158   1              else 
+ 159   1              {
+ 160   2              temp3 = *++ph;
+ 161   2              temp1 = *ph * 256 + temp3;
+ 162   2              temp2 = temp1 - temp;
+ 163   2              *ph =(temp2 >> 8);
+ 164   2              *++ph = temp2;
+ 165   2                      
+ 166   2              temp3 = *++pl;
+ 167   2              temp1 = *pl * 256 + temp3;
+ 168   2              temp2 = temp1 + temp;
+ 169   2              *pl =(temp2 >> 8);
+ 170   2              *++pl = temp2;
+ 171   2              }
+ 172   1      }
+ 173          void main()
+ 174          {
+ 175   1              float temp;
+ 176   1              iic_init();
+ 177   1              servoTimeInit();
+ 178   1              servoCalibration(adData);
+C51 COMPILER V9.55   MAIN                                                                  06/09/2018 09:33:42 PAGE 4   
+
+ 179   1              delay_ms(1000);
+ 180   1              saveAdDate(adInitData);
+ 181   1              while(1)
+ 182   1              {
+ 183   2                      temp = servoQianhou();
+ 184   2                      servoAngleConvert(temp,servoHighOne,servoLowOne);
+ 185   2              }
+ 186   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1014    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     15      53
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
